@@ -22,8 +22,9 @@ function configuredSitePassword() {
 
 export function isValidSitePassword(candidate: string | undefined) {
   const expected = configuredSitePassword();
-  if (!expected || !candidate) return false;
-  const a = Buffer.from(candidate);
+  const normalizedCandidate = candidate?.trim();
+  if (!expected || !normalizedCandidate) return false;
+  const a = Buffer.from(normalizedCandidate);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
