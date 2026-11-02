@@ -7,7 +7,7 @@ import { publicPlatformScript } from "./publicConfig";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { aslanPublicConfig, generateAslanReply, getPresentedKeyHeader, isValidAslanKey, normalizeMessages } from "../aslan";
+import { aslanPublicConfig, derivedAslanKey, generateAslanReply, getPresentedKeyHeader, isValidAslanKey, isValidSitePassword, isValidSiteSession, normalizeMessages, siteSessionToken } from "../aslan";
 
 async function startServer() {
   const app = express();
@@ -19,6 +19,24 @@ async function startServer() {
     res.set("Cache-Control", "no-store").type("application/javascript").send(publicPlatformScript());
   });
   app.get("/api/v1/config", (_req, res) => res.json(aslanPublicConfig()));
+  app.get("/api/auth/session", (req, res) => res.json({ authenticated: isValidSiteSession(req.headers.cookie) }));
+  app.get("/api/auth/api-key", (req, res) => {
+    if (!isValidSiteSession(req.headers.cookie)) return res.status(401).json({ error: { code: "site_login_required", message: "Önce siteye giriş yapmalısın." } });
+    const key = derivedAslanKey();
+    if (!key) return res.status(503).json({ error: { code: "site_password_not_configured", message: "Site şifresi henüz üretim ortamında yapılandırılmadı." } });
+    return res.json({ apiKey: key });
+  });
+  app.post("/api/auth/login", (req, res) => {
+    if (!isValidSitePassword(typeof req.body?.password === "string" ? req.body.password : undefined)) {
+      return res.status(401).json({ error: { code: "invalid_site_password", message: "Şifre doğru değil." } });
+    }
+    res.setHeader("Set-Cookie", `aslan_site_session=${siteSessionToken()}; Path=/; Max-Age=2592000; HttpOnly; SameSite=None; Secure`);
+    return res.json({ authenticated: true });
+  });
+  app.post("/api/auth/logout", (_req, res) => {
+    res.setHeader("Set-Cookie", "aslan_site_session=; Path=/; Max-Age=0; HttpOnly; SameSite=None; Secure");
+    return res.json({ authenticated: false });
+  });
   const chatHandler = async (req: express.Request, res: express.Response) => {
     res.setHeader("Cache-Control", "no-store");
     try {
@@ -33,11 +51,16 @@ async function startServer() {
       return res.status(500).json({ error: { code: "generation_failed", message: error instanceof Error ? error.message : "Yanıt üretilemedi." } });
     }
   };
-  app.post("/api/chat", chatHandler);
+  app.post("/api/chat", (req, res, next) => {
+    if (!isValidSiteSession(req.headers.cookie)) {
+      return res.status(401).json({ error: { code: "site_login_required", message: "Önce Aslan AI sitesine giriş yapmalısın." } });
+    }
+    return chatHandler(req, res).catch(next);
+  });
   app.options("/api/v1/chat", (_req, res) => res.sendStatus(204));
   app.post("/api/v1/chat", (req, res, next) => {
     const presented = getPresentedKeyHeader(req);
-    if (!isValidAslanKey(presented)) {
+    if (!isValidAslanKey(presented) && !isValidSiteSession(req.headers.cookie)) {
       return res.status(401).json({ error: { code: "invalid_api_key", message: "Geçersiz veya eksik Aslan API anahtarı." } });
     }
     res.setHeader("Access-Control-Allow-Origin", "*");

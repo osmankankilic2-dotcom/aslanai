@@ -16,12 +16,44 @@ function configuredKey() {
   return process.env.ASLAN_API_KEY?.trim() ?? "";
 }
 
-export function isValidAslanKey(candidate: string | undefined) {
-  const expected = configuredKey();
+function configuredSitePassword() {
+  return process.env.ASLAN_SITE_PASSWORD?.trim() ?? "";
+}
+
+export function isValidSitePassword(candidate: string | undefined) {
+  const expected = configuredSitePassword();
   if (!expected || !candidate) return false;
   const a = Buffer.from(candidate);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+export function siteSessionToken() {
+  const secret = configuredSitePassword();
+  return secret ? crypto.createHmac("sha256", secret).update("aslan-site-session").digest("hex") : "";
+}
+
+export function isValidSiteSession(cookieHeader: string | undefined) {
+  const match = cookieHeader?.match(/(?:^|;\s*)aslan_site_session=([^;]+)/);
+  const presented = match?.[1];
+  const expected = siteSessionToken();
+  if (!presented || !expected) return false;
+  const a = Buffer.from(presented);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+export function isValidAslanKey(candidate: string | undefined) {
+  const expected = configuredKey() || derivedAslanKey();
+  if (!expected || !candidate) return false;
+  const a = Buffer.from(candidate);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+export function derivedAslanKey() {
+  const secret = configuredSitePassword();
+  return secret ? `aslan_${crypto.createHash("sha256").update(`aslan-api-key:${secret}`).digest("hex")}` : "";
 }
 
 export function getPresentedKeyHeader(req: { headers: Record<string, unknown> }) {
