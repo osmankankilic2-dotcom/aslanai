@@ -25,4 +25,23 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const appUsers = mysqlTable("app_users", {
+  id: int("id").autoincrement().primaryKey(),
+  username: varchar("username", { length: 64 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const apiKeys = mysqlTable("api_keys", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  keyHash: varchar("keyHash", { length: 64 }).notNull().unique(),
+  lastThree: varchar("lastThree", { length: 3 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  revokedAt: timestamp("revokedAt"),
+});
+
+export type AppUser = typeof appUsers.$inferSelect;
+export type ApiKey = typeof apiKeys.$inferSelect;

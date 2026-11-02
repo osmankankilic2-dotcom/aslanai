@@ -16,3 +16,11 @@
 ## Dosya fazı
 - [x] Dosya yükleme ilk sürümde kapalı tutuluyor.
 - [x] İleride kontrollü ve kademeli dosya yükleme için arayüzde hazırlık mesajı bulunuyor.
+
+## Kullanıcı hesapları ve kişisel anahtarlar
+- [x] Siteye giren kullanıcıdan kullanıcı adı ve şifre isteniyor; kayıt ve giriş oturumları sunucu tarafında korunuyor.
+- [x] Her kullanıcı yalnızca kendi sohbetine ve kendi API anahtar listesine erişebiliyor.
+- [x] API anahtarı oluştururken isim vermek zorunlu; anahtar `aslan_` ile başlıyor.
+- [x] Yeni anahtarın tam değeri oluşturma anında gösteriliyor; tam anahtar ve son üç karakter için ayrı kopyalama düğmeleri bulunuyor.
+- [x] Kullanıcı kendi API anahtarını silebiliyor; silinen anahtar API isteklerinde geçersiz oluyor.
+- [x] API anahtarları veritabanında hashlenmiş olarak kalıcı tutuluyor; kaynak koda veya tarayıcı bundle'ına yazılmıyor.
