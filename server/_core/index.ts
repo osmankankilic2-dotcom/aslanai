@@ -118,14 +118,24 @@ async function startServer() {
     if (!await currentUser(req)) return res.status(401).json({ error: { code: "login_required", message: "Önce kullanıcı hesabına giriş yapmalısın." } });
     return chatHandler(req, res).catch(next);
   });
-  app.options("/api/v1/chat", (_req, res) => res.sendStatus(204));
+  const setApiCors = (req: express.Request, res: express.Response) => {
+    const origin = typeof req.headers.origin === "string" ? req.headers.origin : "*";
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Aslan-Api-Key");
+    res.setHeader("Access-Control-Max-Age", "86400");
+    if (origin !== "*") res.setHeader("Vary", "Origin");
+  };
+  app.options("/api/v1/chat", (req, res) => {
+    setApiCors(req, res);
+    return res.sendStatus(204);
+  });
   app.post("/api/v1/chat", async (req, res, next) => {
+    setApiCors(req, res);
     const presented = getPresentedKeyHeader(req);
     const envKeyValid = isValidAslanKey(presented);
     const storedKey = presented ? await findActiveApiKey(hashApiKey(presented)) : undefined;
     if (!envKeyValid && !storedKey) return res.status(401).json({ error: { code: "invalid_api_key", message: "Geçersiz veya silinmiş Aslan API anahtarı." } });
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Aslan-Api-Key");
     return chatHandler(req, res).catch(next);
   });
 
