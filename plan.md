@@ -9,7 +9,8 @@ Aslan AI, Türkçe öncelikli ve İngilizce destekli bir tarayıcı sohbet uygul
 - İstekler `x-aslan-api-key` veya `Authorization: Bearer` ile korunur.
 - API anahtarı tarayıcı koduna yazılmaz; sunucu ortamından okunur.
 - İlk sürümde dosya yükleme kapalıdır; arayüzde bunun sonraki faz olduğu belirtilir.
-- LLM çağrısı sunucu tarafında Manus OpenAI-uyumlu LLM servisine yapılır; yerel Qwen3-4B klasörü ileride aynı adapter arayüzüne bağlanabilecek şekilde temel model olarak dokümante edilir.
+- LLM çağrısı sunucu tarafında Manus OpenAI-uyumlu LLM servisine yapılır. Aslan Plus hızlı günlük katman, Aslan Pro daha güçlü akıl yürütme katmanıdır; teknik model adları ana sohbet yüzeyinde gösterilmez.
+- Qwen3-8B GGUF Q4_K_M yerel seçenek olarak ayrıca indirilecek; canlı yayına bağlamak için ayrı bir yerel model sunucusu gerekecektir.
 
 ## Tasarım
 Üç olasılık: teknik gece konsolu (0.06), sıcak Türk teknoloji atölyesi (0.08), sade kurumsal çalışma masası (0.04). Seçilen yön: sıcak Türk teknoloji atölyesi.

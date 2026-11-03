@@ -106,8 +106,9 @@ async function startServer() {
     try {
       const messages = normalizeMessages(req.body?.messages);
       if (!messages.some((message) => message.role === "user")) return res.status(400).json({ error: { code: "missing_user_message", message: "En az bir kullanıcı mesajı gerekli." } });
-      const content = await generateAslanReply(messages);
-      return res.json({ id: `aslan-${Date.now()}`, model: "Qwen3-4B", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }] });
+      const tier = req.body?.tier === "pro" ? "pro" : "plus";
+      const content = await generateAslanReply(messages, tier);
+      return res.json({ id: `aslan-${Date.now()}`, model: tier === "pro" ? "Aslan Pro" : "Aslan Plus", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }] });
     } catch (error) {
       console.error("[Aslan API]", error);
       return res.status(500).json({ error: { code: "generation_failed", message: error instanceof Error ? error.message : "Yanıt üretilemedi." } });

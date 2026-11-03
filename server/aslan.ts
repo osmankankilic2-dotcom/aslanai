@@ -56,13 +56,25 @@ export function normalizeMessages(input: unknown): AslanMessage[] {
   return messages.filter((message) => message.role !== "system");
 }
 
-async function callOpenAICompatible(baseUrl: string, apiKey: string, model: string | undefined, messages: AslanMessage[]) {
+export type AslanTier = "plus" | "pro";
+
+function modelForTier(tier: AslanTier) {
+  return tier === "pro" ? "gpt-5.5" : "Qwen3-4B";
+}
+
+async function callOpenAICompatible(baseUrl: string, apiKey: string, model: string | undefined, messages: AslanMessage[], tier: AslanTier) {
   const requestBody: Record<string, unknown> = {
     messages: [{ role: "system", content: ASLAN_SYSTEM_PROMPT }, ...messages],
     temperature: 0.35,
-    max_tokens: 2048,
   };
-  if (model) requestBody.model = model;
+  const selectedModel = model || modelForTier(tier);
+  requestBody.model = selectedModel;
+  if (selectedModel.startsWith("gpt-")) {
+    requestBody.max_completion_tokens = 4096;
+    requestBody.reasoning = { effort: tier === "pro" ? "high" : "medium" };
+  } else {
+    requestBody.max_tokens = 2048;
+  }
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -75,17 +87,17 @@ async function callOpenAICompatible(baseUrl: string, apiKey: string, model: stri
   return content;
 }
 
-export async function generateAslanReply(messages: AslanMessage[]) {
+export async function generateAslanReply(messages: AslanMessage[], tier: AslanTier = "plus") {
   const externalUrl = process.env.ASLAN_LLM_URL?.trim();
   const externalKey = process.env.ASLAN_LLM_KEY?.trim();
   if (externalUrl && externalKey) {
-    return callOpenAICompatible(externalUrl, externalKey, process.env.ASLAN_LLM_MODEL || "Qwen3-4B", messages);
+    return callOpenAICompatible(externalUrl, externalKey, process.env.ASLAN_LLM_MODEL || modelForTier(tier), messages, tier);
   }
 
   const baseUrl = process.env.MANUS_API_URL;
   const apiKey = process.env.MANUS_API_KEY;
   if (!baseUrl || !apiKey) throw new Error("LLM servisi yapılandırılmamış");
-  return callOpenAICompatible(baseUrl, apiKey, process.env.ASLAN_LLM_MODEL || undefined, messages);
+  return callOpenAICompatible(baseUrl, apiKey, process.env.ASLAN_LLM_MODEL || undefined, messages, tier);
 }
 
 export function aslanPublicConfig() {
@@ -93,7 +105,10 @@ export function aslanPublicConfig() {
     name: "Aslan AI",
     developer: "Osman Kankılıç",
     primaryLanguage: "tr",
-    model: "Qwen3-4B",
+    tiers: {
+      plus: { name: "Aslan Plus", description: "Hızlı günlük sohbet" },
+      pro: { name: "Aslan Pro", description: "Daha güçlü akıl yürütme" },
+    },
     uploads: "coming-soon",
   };
 }

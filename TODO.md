@@ -24,3 +24,10 @@
 - [x] Yeni anahtarın tam değeri oluşturma anında gösteriliyor; tam anahtar ve son üç karakter için ayrı kopyalama düğmeleri bulunuyor.
 - [x] Kullanıcı kendi API anahtarını silebiliyor; silinen anahtar API isteklerinde geçersiz oluyor.
 - [x] API anahtarları veritabanında hashlenmiş olarak kalıcı tutuluyor; kaynak koda veya tarayıcı bundle'ına yazılmıyor.
+
+## Sohbet deneyimi
+- [x] Ana ekranda teknik model kimliği gösterilmiyor; menüden Aslan Plus veya Aslan Pro seçilebiliyor.
+- [x] Aslan Plus hızlı günlük sohbet katmanı, Aslan Pro daha güçlü akıl yürütme katmanı olarak sunucuya bağlandı.
+- [x] Kullanıcı ve Aslan AI mesajlarında ekran okuyucu etiketli kopyalama düğmesi bulunuyor.
+- [x] Yanıt metni kullanıcıya kademeli olarak akıyor ve bekleme durumunda görünür hareketli gösterge bulunuyor.
+- [x] Yeni sohbet düğmesi üst çubukta küçük, erişilebilir bir düğme olarak da bulunuyor.
