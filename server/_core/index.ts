@@ -138,6 +138,16 @@ async function startServer() {
     if (!envKeyValid && !storedKey) return res.status(401).json({ error: { code: "invalid_api_key", message: "Geçersiz veya silinmiş Aslan API anahtarı." } });
     return chatHandler(req, res).catch(next);
   });
+  const bridgeChat = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    setApiCors(req, res);
+    const presented = getPresentedKeyHeader(req);
+    const envKeyValid = isValidAslanKey(presented);
+    const storedKey = presented ? await findActiveApiKey(hashApiKey(presented)) : undefined;
+    if (!envKeyValid && !storedKey) return res.status(401).json({ error: { code: "invalid_api_key", message: "Geçersiz veya silinmiş Aslan API anahtarı." } });
+    return chatHandler(req, res).catch(next);
+  };
+  app.options("/bridge/chat", (req, res) => { setApiCors(req, res); return res.sendStatus(204); });
+  app.post("/bridge/chat", bridgeChat);
 
   registerOAuthRoutes(app);
   app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
