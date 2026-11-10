@@ -118,14 +118,15 @@ async function callOpenAICompatible(baseUrl: string, apiKey: string, model: stri
 export async function generateAslanReply(messages: AslanMessage[], tier: AslanTier = "plus", requestedModel?: string) {
   const externalUrl = process.env.ASLAN_LLM_URL?.trim() || "https://8000-ijt216qrfxcoawej68sgo-a32a466a.sg2.manus.computer";
   const externalKey = process.env.ASLAN_LLM_KEY?.trim() || "temporary-local-qwen";
-  if (externalUrl && externalKey) {
-    return callOpenAICompatible(externalUrl, externalKey, process.env.ASLAN_LLM_MODEL || requestedModel || modelForTier(tier), messages, tier);
+  const selectedModel = process.env.ASLAN_LLM_MODEL || requestedModel || modelForTier(tier);
+  if (externalUrl && externalKey && selectedModel === "Qwen3-4B") {
+    return callOpenAICompatible(externalUrl, externalKey, selectedModel, messages, tier);
   }
 
   const baseUrl = process.env.MANUS_API_URL;
   const apiKey = process.env.MANUS_API_KEY;
   if (!baseUrl || !apiKey) throw new Error("LLM servisi yapılandırılmamış");
-  return callOpenAICompatible(baseUrl, apiKey, process.env.ASLAN_LLM_MODEL || requestedModel || modelForTier(tier), messages, tier);
+  return callOpenAICompatible(baseUrl, apiKey, selectedModel, messages, tier);
 }
 
 export function aslanPublicConfig() {
