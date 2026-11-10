@@ -1,4 +1,5 @@
 import "dotenv/config";
+import crypto from "node:crypto";
 import express from "express";
 import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -7,7 +8,7 @@ import { publicPlatformScript } from "./publicConfig";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { aslanPublicConfig, generateAslanReply, getPresentedKeyHeader, isValidAslanKey, normalizeMessages } from "../aslan";
+import { aslanPublicConfig, generateAslanReply, getPresentedKeyHeader, isValidAslanKey, normalizeMessages, type AslanMessage } from "../aslan";
 import { createApiKeyRecord, createAppUser, findActiveApiKey, getAppUserById, getAppUserByUsername, listApiKeys, revokeApiKey } from "../db";
 import { clearSessionCookie, createSession, generateApiKey, hashApiKey, passwordDigest, readSession, sessionCookie, verifyPassword } from "../auth";
 
@@ -31,7 +32,7 @@ function setSession(res: express.Response, userId: number) {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  app.use(express.json({ limit: "2mb" }));
+  app.use(express.json({ limit: "12mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
   app.get("/api/health", (_req, res) => res.json({ status: "ok", service: "aslan-ai" }));
   app.get("/api/platform/config.js", (_req, res) => {
@@ -101,14 +102,59 @@ async function startServer() {
     return res.json({ deleted: true });
   });
 
+  app.post("/api/uploads", async (req, res) => {
+    const user = await currentUser(req);
+    if (!user) return res.status(401).json({ error: { code: "login_required", message: "Önce giriş yapmalısın." } });
+    const mimeType = typeof req.body?.mimeType === "string" ? req.body.mimeType : "";
+    const originalName = typeof req.body?.name === "string" ? req.body.name : "dosya";
+    const encoded = typeof req.body?.data === "string" ? req.body.data : "";
+    const allowed = /^(image\/(png|jpeg|webp|gif)|application\/pdf|text\/plain|video\/mp4|audio\/mpeg)$/i.test(mimeType);
+    if (!allowed) return res.status(400).json({ error: { code: "unsupported_file_type", message: "Bu dosya türü desteklenmiyor." } });
+    const bytes = Buffer.from(encoded.replace(/^data:[^;]+;base64,/, ""), "base64");
+    if (!bytes.length || bytes.length > 8 * 1024 * 1024) return res.status(413).json({ error: { code: "file_too_large", message: "Dosya en fazla 8 MB olabilir." } });
+    const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "dosya";
+    const key = `aslan-users/${user.id}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+    const baseUrl = process.env.MANUS_API_URL;
+    const apiKey = process.env.MANUS_API_KEY;
+    if (!baseUrl || !apiKey) return res.status(503).json({ error: { code: "storage_unavailable", message: "Dosya depolama servisi yapılandırılmamış." } });
+    const presign = await fetch(`${baseUrl}/v1/storage/presign/put?path=${encodeURIComponent(key)}`, { headers: { Authorization: `Bearer ${apiKey}` } });
+    const signed = await presign.json().catch(() => ({}));
+    if (!presign.ok || typeof signed.url !== "string") return res.status(502).json({ error: { code: "storage_upload_url_failed", message: "Dosya yükleme adresi alınamadı." } });
+    const uploaded = await fetch(signed.url, { method: "PUT", headers: { "Content-Type": mimeType }, body: bytes });
+    if (!uploaded.ok) return res.status(502).json({ error: { code: "storage_upload_failed", message: "Dosya yüklenemedi." } });
+    return res.status(201).json({ file: { name: originalName, mimeType, key, url: `/manus-storage/${key}` } });
+  });
+
+  async function resolveStoredAssets(messages: AslanMessage[]) {
+    const baseUrl = process.env.MANUS_API_URL;
+    const apiKey = process.env.MANUS_API_KEY;
+    if (!baseUrl || !apiKey) return messages;
+    return Promise.all(messages.map(async (message) => {
+      if (!Array.isArray(message.content)) return message;
+      const content = await Promise.all(message.content.map(async (part) => {
+        const asset = part.type === "image_url" ? part.image_url : part.type === "file_url" ? part.file_url : undefined;
+        if (!asset || !asset.url.startsWith("/manus-storage/")) return part;
+        const key = asset.url.slice("/manus-storage/".length);
+        const response = await fetch(`${baseUrl}/v1/storage/presign/get?path=${encodeURIComponent(key)}`, { headers: { Authorization: `Bearer ${apiKey}` } });
+        const signed = await response.json().catch(() => ({}));
+        if (typeof signed.url !== "string") throw new Error("Ek dosya modele açılamadı.");
+        if (part.type === "image_url") return { ...part, image_url: { ...part.image_url, url: signed.url } };
+        if (part.type === "file_url") return { ...part, file_url: { ...part.file_url, url: signed.url } };
+        return part;
+      }));
+      return { ...message, content };
+    }));
+  }
+
   const chatHandler = async (req: express.Request, res: express.Response) => {
     res.setHeader("Cache-Control", "no-store");
     try {
-      const messages = normalizeMessages(req.body?.messages);
+      const messages = await resolveStoredAssets(normalizeMessages(req.body?.messages));
       if (!messages.some((message) => message.role === "user")) return res.status(400).json({ error: { code: "missing_user_message", message: "En az bir kullanıcı mesajı gerekli." } });
       const tier = req.body?.tier === "pro" ? "pro" : "plus";
-      const content = await generateAslanReply(messages, tier);
-      return res.json({ id: `aslan-${Date.now()}`, model: tier === "pro" ? "Aslan Pro" : "Aslan Plus", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }] });
+      const requestedModel = typeof req.body?.model === "string" ? req.body.model : undefined;
+      const content = await generateAslanReply(messages, tier, requestedModel);
+      return res.json({ id: `aslan-${Date.now()}`, model: requestedModel || (tier === "pro" ? "gpt-5.5" : "Qwen3-4B"), choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }] });
     } catch (error) {
       console.error("[Aslan API]", error);
       return res.status(500).json({ error: { code: "generation_failed", message: error instanceof Error ? error.message : "Yanıt üretilemedi." } });

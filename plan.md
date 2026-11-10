@@ -11,6 +11,9 @@ Aslan AI, Türkçe öncelikli ve İngilizce destekli bir tarayıcı sohbet uygul
 - İlk sürümde dosya yükleme kapalıdır; arayüzde bunun sonraki faz olduğu belirtilir.
 - LLM çağrısı sunucu tarafında Manus OpenAI-uyumlu LLM servisine yapılır. Aslan Plus hızlı günlük katman, Aslan Pro daha güçlü akıl yürütme katmanıdır; teknik model adları ana sohbet yüzeyinde gösterilmez.
 - Qwen3-8B GGUF Q4_K_M yerel seçenek olarak ayrıca indirilecek; canlı yayına bağlamak için ayrı bir yerel model sunucusu gerekecektir.
+- Model seçici, güncel katalogda kullanılabilir durumdaki metin modellerini gerçek kimlikleriyle gösterir; geçici olarak kullanılamayan sağlayıcılar listeye dahil edilmez.
+- Sohbet alanı kullanıcıya özel depolamaya fotoğraf, PDF, metin, MP4 ve MP3 yükleyebilir; sunucu, model isteğinde kullanılmak üzere geçici erişim adresi üretir ve tarayıcıya servis anahtarı vermez.
+- Görsel üretim modelleri `gemini-2.5-flash-image-preview` ve `gpt-image-2`, ses transkripsiyon modeli `whisper-1` olarak ayrı yeteneklerdir; metin sohbetiyle karıştırılmaz.
 
 ## Tasarım
 Üç olasılık: teknik gece konsolu (0.06), sıcak Türk teknoloji atölyesi (0.08), sade kurumsal çalışma masası (0.04). Seçilen yön: sıcak Türk teknoloji atölyesi.

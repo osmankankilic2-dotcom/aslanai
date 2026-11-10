@@ -31,3 +31,7 @@
 - [x] Kullanıcı ve Aslan AI mesajlarında ekran okuyucu etiketli kopyalama düğmesi bulunuyor.
 - [x] Yanıt metni kullanıcıya kademeli olarak akıyor ve bekleme durumunda görünür hareketli gösterge bulunuyor.
 - [x] Yeni sohbet düğmesi üst çubukta küçük, erişilebilir bir düğme olarak da bulunuyor.
+- [x] Çalışan metin modelleri gerçek model adlarıyla seçilebilir: Qwen3-4B, gpt-5.5, gpt-5, gpt-5-mini, gpt-5-nano, gpt-6.1-sol, gpt-6-luna, gpt-6-sol, gemini-3.1-pro-preview, gemini-3.8-flash ve gemini-3-flash-preview.
+- [x] İndirilen Qwen3-8B-Q4_K_M ve Phi-4-mini-instruct-Q4_K_M yerel seçenekleri katalogda açıkça gösteriliyor; canlı sunucuya bağlı olmayan seçenekler mesaj gönderirken dürüstçe bildirilir.
+- [x] Fotoğraf, PDF, metin, MP4 ve MP3 için girişte dosya ekleme düğmesi eklendi; dosyalar sunucu üzerinden kullanıcıya özel kalıcı depolama adresine yüklenip desteklenen model isteğine ekleniyor.
+- [x] Görsel modelleri `gemini-2.5-flash-image-preview` ve `gpt-image-2`, ses modeli `whisper-1` olarak yapılandırmada açıkça gösteriliyor. Metinden sese modeli mevcut katalogda bulunmadığı için eklenmedi.
